@@ -1,40 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Nov 21 16:20:18 2019
 
-@authors: andrew, matt
-"""
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import lightgbm as lgbm
-from sklear.preprocessing import LabelEncoder
-from sklearn.model_selection import KFold
-import datetime
-import os
-import gc
-
-PATH = "../input/ashrae-energy-prediction/"
-
-df_train = pd.read_csv(PATH + 'train.csv')
-#TODO: remove outliers
-
-#TODO: fill in missings
 
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from pandas.api.types import is_categorical_dtype
 
+PATH = "../input/ashrae-energy-prediction/"
+
+df_train = pd.read_csv(PATH + 'train.csv')
+
 def reduce_mem(df, use_float16 = False):
+
 	initial_mem = df.memory_usage().sum() / 1024 ** 2
 	print("initial df mem usage: {:.2f}mb".format(initial_mem))
   
 	for col in df.columns:
-		if is_datetime(df[col] or is_categorical_dtype(df[col]):
+		if (is_datetime(df[col] or is_categorical_dtype(df[col]))):
 			continue
+
 		col_dtype = df[col].dtype
 					   
-		if col_dtype != object
+		if col_dtype != object:
 			col_min = df[col].min()
 			col_max = df[col].max()
 		  
@@ -43,14 +31,14 @@ def reduce_mem(df, use_float16 = False):
 					df[col] = df[col].astype(np.int8)
 				elif col_min > np.iinfo(np.int16).min and col_max < np.iinfo(np.int16).max:
 					df[col] = df[col].astype(np.int16)
-				elif col_min > np.iinfo(np.int32.min and col_max < np.iinfo(np.int32).max:
+				elif col_min > np.iinfo(np.int32).min and col_max < np.iinfo(np.int32).max:
 					df[col] = df[col].astype(np.int32)
 				elif col_min > np.iinfo(np.int64) and col_max < np.iinfo(np.int64).max:
 					df[col] = df[col].astype(int64)
 			else:
-				if use_float16 and col_min > np.iinfo(np.float16) and col_max < np.iinfo(np.col16)
+				if use_float16 and col_min > np.iinfo(np.float16) and col_max < np.iinfo(np.col16):
 					df[col] = df[col].astype(np.float16)
-				elif col_min > np.iinfo(np.float32) and col_max < np.iinfo(np.col32)
+				elif col_min > np.iinfo(np.float32) and col_max < np.iinfo(np.col32):
 					df[col] = df[col].astype(np.float32)
 				else:
 					df[col] = df[col].astype(float64)
