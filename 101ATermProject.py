@@ -63,4 +63,8 @@ reduce_mem(df_weather_train)
 reduce_mem(df_weather_test)
 reduce_mem(df_building_metadata)
 
-# 
+# training the regression models
+
+# generating output
+
+#
