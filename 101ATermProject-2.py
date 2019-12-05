@@ -14,7 +14,7 @@ import os
 import gc
 
 ###############
-
+#reduce memory usage function
 def reduce_mem(df, use_float16=False):
     """
     Iterate through all the columns of a dataframe and modify the data type to reduce memory usage.
@@ -57,6 +57,75 @@ def reduce_mem(df, use_float16=False):
     return df
 
 ###############
+
+###############
+#fill missing weather data function
+def fill_missing_weather(df_weather):
+    
+    #fill missing dates
+    format = "%Y-%m-%d %H:%M:%S"
+    first_date = datetime.datetime.strptime(df_weather['timestamp'].min(), format)
+    last_date = datetime.datetime.strptime(df_weather['timestamp'].max(), format)
+    hrs_total = int(((last_date - first_date).total_seconds() + 3600) / 3600)
+    hrs_list = [(last_date - datetime.timedelta(hours = h)).strftime(format) for h in range(hrs_total)]
+
+    missing_hours = []
+	#16 sites w hourly data
+    for id in range(16):
+        hours = np.array(df_weather[df_weather['site_id'] == id]['timestamp'])
+        add_rows = pd.DataFrame(np.setdiff1d(hrs_list, hours), columns=['timestamp'])
+        add_rows['site_id'] = id
+        df_weather = pd.concat([df_weather, add_rows])
+        df_weather = df_weather.reset_index(drop=True)           
+
+    #add new date/time features
+    df_weather["datetime"] = pd.to_datetime(df_weather["timestamp"])
+    df_weather["day"] = df_weather["datetime"].dt.day
+    df_weather["week"] = df_weather["datetime"].dt.week
+    df_weather["month"] = df_weather["datetime"].dt.month
+    
+    #index reset, fast update
+    df_weather = df_weather.set_index(['site_id','day','month'])
+
+	#fill empties
+	
+	#fill air_temperature
+    fill_air_temp = pd.DataFrame(df_weather.groupby(['site_id','day','month'])['air_temperature'].mean(), columns=["air_temperature"])
+    df_weather.update(fill_air_temp,overwrite=False)
+
+	#fill cloud_coverage
+    fill_cloud_cover = df_weather.groupby(['site_id','day','month'])['cloud_coverage'].mean()
+    fill_cloud_cover = pd.DataFrame(fill_cloud_cover.fillna(method='ffill'), columns=["cloud_coverage"])
+    df_weather.update(fill_cloud_cover,overwrite=False)
+
+	#fill dew_temperature
+    fill_dew_temp = pd.DataFrame(df_weather.groupby(['site_id','day','month'])['dew_temperature'].mean(), columns=["dew_temperature"])
+    df_weather.update(fill_dew_temp, overwrite=False)
+
+	#fill sea_level_pressure
+    fill_sea_level = df_weather.groupby(['site_id','day','month'])['sea_level_pressure'].mean()
+    fill_sea_level = pd.DataFrame(fill_sea_level.fillna(method='ffill'), columns=['sea_level_pressure'])
+    df_weather.update(fill_sea_level, overwrite=False)
+
+	#fill wind_direction
+    fill_wind_dir =  pd.DataFrame(df_weather.groupby(['site_id','day','month'])['wind_direction'].mean(), columns=['wind_direction'])
+    df_weather.update(fill_wind_dir, overwrite=False)
+	
+	#fill wind_speed
+    fill_wind_speed =  pd.DataFrame(df_weather.groupby(['site_id','day','month'])['wind_speed'].mean(), columns=['wind_speed'])
+    df_weather.update(fill_wind_speed, overwrite=False)
+
+	#fill precip_depth_1_hr
+    fill_precip_depth = df_weather.groupby(['site_id','day','month'])['precip_depth_1_hr'].mean()
+    fill_precip_depth = pd.DataFrame(fill_precip_depth.fillna(method='ffill'), columns=['precip_depth_1_hr'])
+    df_weather.update(fill_precip_depth, overwrite=False)
+
+    df_weather = df_weather.reset_index()
+    df_weather = df_weather.drop(['datetime','day','week','month'], axis=1)
+        
+    return df_weather
+###############
+
 
 pd.set_option('display.max_columns', 20)
 
