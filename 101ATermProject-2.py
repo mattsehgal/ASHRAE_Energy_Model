@@ -95,7 +95,7 @@ categorical_features = ["building_id", "site_id", "meter", "primary_use"]
 model = LGBMRegressor()
 model.fit(train_feature, train_target, categorical_feature=categorical_features)
 
-print(np.sqrt(mean_squared_log_error(test_target, np.clip(np.expm1(model.predict(test_feature)), 0, None))))
+print(np.sqrt(mean_squared_log_error(test_target, np.clip(model.predict(test_feature), 0, None))))
 print(train_feature)
 
 df_output = pd.read_csv(PATH + 'test.csv')
@@ -105,12 +105,10 @@ df_weather = pd.read_csv(PATH + 'weather_train.csv')
 df_output = df_output.merge(df_building, on='building_id', how='left')
 df_output = df_output.merge(df_weather, on=['site_id', 'timestamp'], how='left')
 df_output.timestamp = pd.to_datetime(df_output.timestamp, format="%Y-%m-%d %H:%M:%S")
-df_output = df_output.merge(df_building, on='building_id', how='left')
-df_output = df_output.merge(df_weather, on=['site_id', 'timestamp'], how='left')
-df_output.timestamp = pd.to_datetime(df_output.timestamp, format="%Y-%m-%d %H:%M:%S")
 df_output.primary_use = le.fit_transform(df_output.primary_use)
 
-output_feature = df_output.drop(columns = drop_features)
+drop_features_2 = ['row_id','year_built', 'floor_count', 'sea_level_pressure', 'wind_direction', 'wind_speed']
+output_feature = df_output.drop(columns = drop_features_2)
 output_feature.timestamp = output_feature.timestamp.apply(lambda x:x.toordinal())
 
 output_feature = reduce_mem(output_feature,use_float16=True)
