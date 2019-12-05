@@ -61,7 +61,6 @@ def reduce_mem(df, use_float16=False):
 ###############
 #fill missing weather data function
 def fill_missing_weather(df_weather):
-    
     #fill missing dates
     format = "%Y-%m-%d %H:%M:%S"
     first_date = datetime.datetime.strptime(df_weather['timestamp'].min(), format)
@@ -86,43 +85,34 @@ def fill_missing_weather(df_weather):
     
     #index reset, fast update
     df_weather = df_weather.set_index(['site_id','day','month'])
-
 	#fill empties
-	
 	#fill air_temperature
     fill_air_temp = pd.DataFrame(df_weather.groupby(['site_id','day','month'])['air_temperature'].mean(), columns=["air_temperature"])
     df_weather.update(fill_air_temp,overwrite=False)
-
 	#fill cloud_coverage
     fill_cloud_cover = df_weather.groupby(['site_id','day','month'])['cloud_coverage'].mean()
     fill_cloud_cover = pd.DataFrame(fill_cloud_cover.fillna(method='ffill'), columns=["cloud_coverage"])
     df_weather.update(fill_cloud_cover,overwrite=False)
-
 	#fill dew_temperature
     fill_dew_temp = pd.DataFrame(df_weather.groupby(['site_id','day','month'])['dew_temperature'].mean(), columns=["dew_temperature"])
     df_weather.update(fill_dew_temp, overwrite=False)
-
 	#fill sea_level_pressure
     fill_sea_level = df_weather.groupby(['site_id','day','month'])['sea_level_pressure'].mean()
     fill_sea_level = pd.DataFrame(fill_sea_level.fillna(method='ffill'), columns=['sea_level_pressure'])
     df_weather.update(fill_sea_level, overwrite=False)
-
 	#fill wind_direction
     fill_wind_dir =  pd.DataFrame(df_weather.groupby(['site_id','day','month'])['wind_direction'].mean(), columns=['wind_direction'])
     df_weather.update(fill_wind_dir, overwrite=False)
-	
 	#fill wind_speed
     fill_wind_speed =  pd.DataFrame(df_weather.groupby(['site_id','day','month'])['wind_speed'].mean(), columns=['wind_speed'])
     df_weather.update(fill_wind_speed, overwrite=False)
-
 	#fill precip_depth_1_hr
     fill_precip_depth = df_weather.groupby(['site_id','day','month'])['precip_depth_1_hr'].mean()
     fill_precip_depth = pd.DataFrame(fill_precip_depth.fillna(method='ffill'), columns=['precip_depth_1_hr'])
     df_weather.update(fill_precip_depth, overwrite=False)
 
     df_weather = df_weather.reset_index()
-    df_weather = df_weather.drop(['datetime','day','week','month'], axis=1)
-        
+    df_weather = df_weather.drop(['datetime','day','week','month'], axis=1) 
     return df_weather
 ###############
 
