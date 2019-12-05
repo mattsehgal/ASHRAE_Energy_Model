@@ -134,6 +134,7 @@ PATH = '/Users/jacobhan/Documents/GitHub/101TermProject/ashrae-energy-prediction
 df_train = pd.read_csv(PATH + 'train.csv')
 df_building = pd.read_csv(PATH + 'building_metadata.csv')
 df_weather = pd.read_csv(PATH + 'weather_train.csv')
+df_weather = fill_missing_weather(df_weather)
 df_train = df_train[df_train['building_id'] != 1099]
 df_train = df_train.query('not (building_id <= 104 & meter == 0 & timestamp <= "2016-05-20")')
 df_train = df_train.merge(df_building, on='building_id', how='left')
