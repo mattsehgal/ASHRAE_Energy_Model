@@ -129,7 +129,7 @@ PATH = '/Users/andrew/Desktop/gitdemoapp/101TermProject/ashrae-energy-prediction
 df_train = pd.read_csv(PATH + 'train.csv')
 df_building = pd.read_csv(PATH + 'building_metadata.csv')
 df_weather = pd.read_csv(PATH + 'weather_train.csv')
-df_weather = fill_missing_weather(df_weather)
+# df_weather = fill_missing_weather(df_weather)
 df_train = df_train[df_train['building_id'] != 1099]
 df_train = df_train.query('not (building_id <= 104 & meter == 0 & timestamp <= "2016-05-20")')
 df_train = df_train.merge(df_building, on='building_id', how='left')
@@ -143,25 +143,27 @@ gc.collect()
 
 le = LabelEncoder()
 df_train.primary_use = le.fit_transform(df_train.primary_use)
+df_train['weekday'] = df_train['timestamp'].dt.weekday
+df_train['hour'] = df_train['timestamp'].dt.hour
 test_feature = df_train[df_train['timestamp'] >= pd.to_datetime('2016-10-01')]
 train_feature = df_train[df_train['timestamp'] < pd.to_datetime('2016-10-01')]
 test_target = test_feature['meter_reading']
 train_target = train_feature['meter_reading']
-drop_features = ['meter_reading', 'year_built', 'floor_count', 'sea_level_pressure', 'wind_direction', 'wind_speed']
+drop_features = ['meter_reading', 'timestamp', 'year_built', 'floor_count', 'sea_level_pressure', 'wind_direction', 'wind_speed']
 test_feature = test_feature.drop(columns = drop_features)
 train_feature = train_feature.drop(columns = drop_features)
 del df_train
 gc.collect()
 
-test_feature.timestamp = test_feature.timestamp.apply(lambda x:x.toordinal())
-train_feature.timestamp = train_feature.timestamp.apply(lambda x:x.toordinal())
+# test_feature.timestamp = test_feature.timestamp.apply(lambda x:x.toordinal())
+# train_feature.timestamp = train_feature.timestamp.apply(lambda x:x.toordinal())
 
-categorical_features = ["building_id", "site_id", "meter", "primary_use"]
+categorical_features = ["building_id", "site_id", "meter", "primary_use", "weekday"]
 model = LGBMRegressor()
-model.fit(train_feature, train_target, categorical_feature=categorical_features)
+model.fit(train_feature, np.log1p(train_target), categorical_feature=categorical_features)
 
-print(np.sqrt(mean_squared_log_error(test_target, np.clip(model.predict(test_feature), 0, None))))
-print(train_feature)
+print(np.sqrt(mean_squared_log_error(test_target, np.clip(np.expm1(model.predict(test_feature)), 0, None))))
+# print(train_feature)
 
 df_output = pd.read_csv(PATH + 'test.csv')
 df_building = pd.read_csv(PATH + 'building_metadata.csv')
@@ -182,7 +184,7 @@ del df_building
 del df_weather
 gc.collect()
 
-print(output_feature)
+# print(output_feature)
 
-output_target = model.predict(output_feature)
-print(output_target)
+# output_target = model.predict(output_feature)
+# print(output_target)
