@@ -16,9 +16,7 @@ import gc
 ###############
 #reduce memory usage function
 def reduce_mem(df, use_float16=False):
-    """
-    Iterate through all the columns of a dataframe and modify the data type to reduce memory usage.
-    """
+    
     start_mem = df.memory_usage().sum() / 1024 ** 2
     print("Memory usage of dataframe is {:.2f} MB".format(start_mem))
 
@@ -72,7 +70,7 @@ def fill_missing_weather(df_weather):
         hours = np.array(df_weather[df_weather['site_id'] == id]['timestamp'])
         add_rows = pd.DataFrame(np.setdiff1d(hrs_list, hours), columns=['timestamp'])
         add_rows['site_id'] = id
-        df_weather = pd.concat([df_weather, add_rows])
+        df_weather = pd.concat([df_weather, add_rows],sort=True)
         df_weather = df_weather.reset_index(drop=True)           
 
     #add new date/time features
@@ -138,11 +136,13 @@ def feature_engineering(df):
     
     return df
 ###############
+    
+print('Beginning run...\n')
 
 pd.set_option('display.max_columns', 20)
 
 PATH = '/Users/quant/Downloads/ashrae-energy-prediction/'
-
+print('>> Creating DataFrames...')
 df_train = pd.read_csv(PATH + 'train.csv')
 df_train = df_train [ df_train['building_id'] != 1099 ]
 df_train = df_train.query('not (building_id <= 104 & meter == 0 & timestamp <= "2016-05-20")')
@@ -150,30 +150,36 @@ df_building = pd.read_csv(PATH + 'building_metadata.csv')
 df_weather = pd.read_csv(PATH + 'weather_train.csv')
 
 #fill weather
+print('>> Filling missing weather values...')
 df_weather = fill_missing_weather(df_weather)
 
 #reduce mem
+print('>> Reducing DataFrame memory usage...\n')
 df_train = reduce_mem(df_train, use_float16=True)
 df_weather = reduce_mem(df_weather, use_float16=True)
 df_building = reduce_mem(df_building, use_float16=True)
 
 #merge data
+print('\n>> Merging training data...')
 df_train = df_train.merge(df_building, left_on='building_id', right_on='building_id', how='left')
 df_train = df_train.merge(df_weather, how='left', left_on=['site_id','timestamp'], right_on=['site_id','timestamp'])
 del df_weather
 gc.collect()
 
 #feature engineering
+print('>> Running feature engineering...')
 df_train = feature_engineering(df_train)
 df_train.head(20)
 
 #features & target vars
+print('>> Setting features and target variables...')
 target = np.log1p(df_train["meter_reading"])
 features = df_train.drop('meter_reading', axis = 1)
 del df_train
 gc.collect()
 
 #kfold lgbm model
+print('>> Training models with KFold...\n')
 categorical_features = ["building_id", "site_id", "meter", "primary_use", "weekend"]
 params = {
     "objective": "regression",
@@ -208,56 +214,76 @@ del features, target
 gc.collect()
 
 #feature importance
-for model in models:
-    lgbm.plot_importance(model)
-    plt.show()
-	
+#print('\n>> Plotting feature importance...')
+#for model in models:
+#    lgbm.plot_importance(model)
+#    plt.show()
+
+print('>> Beginning testing...')
+
 #load test data
+print('>> Loading test data...\n')
 df_test = pd.read_csv(PATH + 'test.csv')
 row_id = df_test["row_id"]
 df_test.drop("row_id", axis=1, inplace=True)
 df_test = reduce_mem(df_test)
 
 #merge building data
+print('\n>> Merging building data in test set...')
 df_test = df_test.merge(df_building, left_on='building_id', right_on='building_id', how='left')
 del df_building
 gc.collect()
 
 #fill weather
+print('>> Filling missing weather values...\n')
 df_weather = pd.read_csv(PATH + 'weather_test.csv')
 df_weather = fill_missing_weather(df_weather)
 df_weather = reduce_mem(df_weather)
 
 #merge weather data
+print('\n>> Merging weather data...')
 df_test = df_test.merge(df_weather,how='left',on=['timestamp','site_id'])
 del df_weather
 gc.collect()
 
+#feature engineering
+print('>> Running feature engineering...')
 df_test = feature_engineering(df_test)
 df_test.head(20)
 
 #predict
+print('>> Beginning prediction...')
+x = 0
 results = []
 for model in models:
+    x = x+1
+    print(' > Creating prediction model #',x,'...')
     if results == []:
         results = np.expm1(model.predict(df_test, num_iteration=model.best_iteration)) / len(models)
     else:
         results += np.expm1(model.predict(df_test, num_iteration=model.best_iteration)) / len(models)
     del model
     gc.collect()
+    print(' > Model #',x,' has been created...')
 	
 del df_test, models
 gc.collect()
 
 #results for submission
+print('\n>> Creating results DataFrame...')
 df_results = pd.DataFrame({"row_id": row_id, "meter_reading": np.clip(results, 0, a_max=None)})
 
 del row_id, results
 gc.collect()
+print('>> Writing results to submission file...')
+df_results.to_csv(r'C:\Users\quant\101termproj\submission.csv', index=False)
 
-df_results.to_csv("submission.csv", index=False)
-
-df_results.head(20)
+print('>> Validating number of rows...')
+if len(df_results.index) == 41697600:
+    print(' > Submission file is VALID, terminating run...')
+else:
+    print(' > Submission file is INVALID, terminating run...')
+print('\nRun terminated.')
 
 
 
