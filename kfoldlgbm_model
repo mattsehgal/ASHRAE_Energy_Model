@@ -214,10 +214,10 @@ del features, target
 gc.collect()
 
 #feature importance
-#print('\n>> Plotting feature importance...')
-#for model in models:
-#    lgbm.plot_importance(model)
-#    plt.show()
+print('\n>> Plotting feature importance...')
+for model in models:
+    lgbm.plot_importance(model)
+    plt.show()
 
 print('>> Beginning testing...')
 
