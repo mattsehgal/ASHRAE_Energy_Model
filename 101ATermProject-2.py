@@ -15,6 +15,7 @@ from sklearn.metrics import mean_squared_log_error
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from pandas.api.types import is_categorical_dtype
 from lightgbm import LGBMRegressor
+import matplotlib.pyplot as plt
 import datetime
 import os
 import gc
@@ -127,10 +128,14 @@ pd.set_option('display.max_columns', 20)
 PATH = '/Users/andrew/Desktop/gitdemoapp/101TermProject/ashrae-energy-prediction/'
 
 df_train = pd.read_csv(PATH + 'train.csv')
+fig, axes = plt.subplots(1,2, figsize = (12, 5), dpi = 100)
+df_train.query('building_id <= 104 & meter == 0 & timestamp <= "2016-05-20"')['meter_reading'].plot.hist(ax=axes[0], title = 'Site 0 electrc meter reading up to 2016-05-20')
+df_train.query('building_id <= 104 & meter == 0 & timestamp > "2016-05-20"')['meter_reading'].plot.hist(ax=axes[1], title = 'Site 0 electrc meter reading after 2016-05-20')
+plt.show()
 df_building = pd.read_csv(PATH + 'building_metadata.csv')
 df_weather = pd.read_csv(PATH + 'weather_train.csv')
-# df_weather = fill_missing_weather(df_weather)
-df_train = df_train[df_train['building_id'] != 1099]
+df_weather = fill_missing_weather(df_weather)
+# df_train = df_train[df_train['building_id'] != 1099]
 df_train = df_train.query('not (building_id <= 104 & meter == 0 & timestamp <= "2016-05-20")')
 df_train = df_train.merge(df_building, on='building_id', how='left')
 df_train = df_train.merge(df_weather, on=['site_id', 'timestamp'], how='left')
@@ -140,6 +145,16 @@ df_train = reduce_mem(df_train,use_float16=True)
 del df_building
 del df_weather
 gc.collect()
+
+fig, axes = plt.subplots(3, 1, figsize=(12, 18), dpi=100)
+df_train[['timestamp', 'meter_reading']].set_index('timestamp').resample('D').mean()['meter_reading'].plot(ax=axes[0]).set_ylabel('Meter reading', fontsize=12)
+axes[0].set_title('Mean meter reading by day', fontsize=12)
+df_train[df_train['building_id']==1099][['timestamp', 'meter_reading']].set_index('timestamp').resample('D').mean()['meter_reading'].plot(ax=axes[1]).set_ylabel('Meter reading', fontsize=12)
+axes[1].set_title('Mean meter reading by day for building 1099', fontsize=12)
+df_train = df_train[df_train['building_id'] != 1099]
+df_train[['timestamp', 'meter_reading']].set_index('timestamp').resample('D').mean()['meter_reading'].plot(ax=axes[2]).set_ylabel('Meter reading', fontsize=12)
+axes[2].set_title('Mean meter reading by day excluding building 1099', fontsize=12)
+plt.show()
 
 le = LabelEncoder()
 df_train.primary_use = le.fit_transform(df_train.primary_use)
