@@ -8,14 +8,17 @@ from sklearn.metrics import mean_squared_log_error
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from pandas.api.types import is_categorical_dtype
 from lightgbm import LGBMRegressor
+import matplotlib.pyplot as plt
 import datetime
-import os
 import gc
 
 #FUNCTIONS
 ###############
 #reduce memory usage function
 def reduce_mem(df, use_float16=False):
+    """
+    Iterate through all the columns of a dataframe and modify the data type to reduce memory usage.
+    """
     start_mem = df.memory_usage().sum() / 1024 ** 2
     print("Memory usage of dataframe is {:.2f} MB".format(start_mem))
 
@@ -140,7 +143,7 @@ pd.set_option('display.max_columns', 20)
 
 PATH = '/Users/quant/Downloads/ashrae-energy-prediction/'
 
-df_train = pd.read_csv(DATA_PATH + 'train.csv')
+df_train = pd.read_csv(PATH + 'train.csv')
 df_train = df_train [ df_train['building_id'] != 1099 ]
 df_train = df_train.query('not (building_id <= 104 & meter == 0 & timestamp <= "2016-05-20")')
 df_building = pd.read_csv(PATH + 'building_metadata.csv')
@@ -162,7 +165,7 @@ gc.collect()
 
 #feature engineering
 df_train = feature_engineering(df_train)
-#df_train.head(20)
+df_train.head(20)
 
 #features & target vars
 target = np.log1p(df_train["meter_reading"])
@@ -185,20 +188,20 @@ params = {
 kfold = KFold(n_splits=3)
 models = []
 
-for train_index, test_index in kf.split(features):
+for train_index, test_index in kfold.split(features):
     features_train = features.loc[train_index]
     target_train = target.loc[train_index]
     
     features_test = features.loc[test_index]
     target_test = target.loc[test_index]
     
-    d_training = lgb.Dataset(features_train, label=target_train,categorical_feature=categorical_features, free_raw_data=False)
-    d_test = lgb.Dataset(features_test, label=target_test,categorical_feature=categorical_features, free_raw_data=False)
+    d_training = lgbm.Dataset(features_train, label=target_train,categorical_feature=categorical_features, free_raw_data=False)
+    d_test = lgbm.Dataset(features_test, label=target_test,categorical_feature=categorical_features, free_raw_data=False)
     
-    model = lgb.train(params, train_set=d_training, num_boost_round=1000, valid_sets=[d_training,d_test], verbose_eval=25, early_stopping_rounds=50)
+    model = lgbm.train(params, train_set=d_training, num_boost_round=1000, valid_sets=[d_training,d_test], verbose_eval=25, early_stopping_rounds=50)
     models.append(model)
     
-	del features_train, target_train, features_test, target_test, d_training, d_test
+    del features_train, target_train, features_test, target_test, d_training, d_test
     gc.collect()
 	
 del features, target
@@ -206,7 +209,7 @@ gc.collect()
 
 #feature importance
 for model in models:
-    lgb.plot_importance(model)
+    lgbm.plot_importance(model)
     plt.show()
 	
 #load test data
@@ -231,13 +234,13 @@ del df_weather
 gc.collect()
 
 df_test = feature_engineering(df_test)
-#df_test.head(20)
+df_test.head(20)
 
 #predict
 results = []
 for model in models:
     if results == []:
-		results = np.expm1(model.predict(df_test, num_iteration=model.best_iteration)) / len(models)
+        results = np.expm1(model.predict(df_test, num_iteration=model.best_iteration)) / len(models)
     else:
         results += np.expm1(model.predict(df_test, num_iteration=model.best_iteration)) / len(models)
     del model
@@ -252,9 +255,9 @@ df_results = pd.DataFrame({"row_id": row_id, "meter_reading": np.clip(results, 0
 del row_id, results
 gc.collect()
 
-df_results.to_csv("results.csv", index=False)
+df_results.to_csv("submission.csv", index=False)
 
-#df_results.head(20)
+df_results.head(20)
 
 
 
