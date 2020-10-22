@@ -1,5 +1,0 @@
-https://www.kaggle.com/jesucristo/starter-great-energy-predictor/notebook
-https://www.kaggle.com/caesarlupum/ashrae-start-here-a-gentle-introduction
-https://www.kaggle.com/ryches/simple-lgbm-solution
-https://www.kaggle.com/aitude/ashrae-kfold-lightgbm-without-leak-1-08
-https://www.kaggle.com/sgalella/ashrae-competition-introduction ***great for preprocessing examples***
